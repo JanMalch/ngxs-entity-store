@@ -1,1 +1,20 @@
 /* You can add global styles to this file, and also import other style files */
+body {
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  min-height: 100%;
+  padding: 32px;
+  margin: 0;
+  font: 400 14px/1.5 'Segoe UI',Roboto,sans-serif;
+}
+
+button {
+  margin: 4px 8px;
+  border: none;
+  border-radius: 3px;
+  background: #1e88e5;
+  color: white;
+  padding: 8px 16px;
+  cursor: pointer;
+}
