@@ -16,6 +16,7 @@ import {
 import {ToDo, TodoState} from './store/todo';
 import {Observable} from 'rxjs';
 import {SetLoading} from './store/entity-store/action-generator';
+import {Reset} from './store/entity-store/action-generator/reset';
 
 @Component({
   selector: 'app-root',
@@ -29,15 +30,15 @@ export class AppComponent {
   @Select(TodoState.active) active$: Observable<ToDo>;
   @Select(TodoState.activeId) activeId$: Observable<string>;
   @Select(TodoState.keys) keys$: Observable<string[]>;
-  @Select(TodoState.loading) loading$: Observable<ToDo>;
-  @Select(TodoState.error) error$: Observable<ToDo>;
+  @Select(TodoState.loading) loading$: Observable<boolean>;
+  @Select(TodoState.error) error$: Observable<Error | undefined>;
 
-  private counter = 2;
+  private counter = 0;
   private loading = false;
   private error = false;
 
   constructor(private store: Store) {
-    this.store.dispatch(AddOrReplace(TodoState, {
+    /*this.store.dispatch(AddOrReplace(TodoState, {
       title: 'NGXS Entity Store 0',
       description: 'Some Descr 0',
       done: false
@@ -56,7 +57,7 @@ export class AppComponent {
           done: false
         }
       ]
-    ));
+    ));*/
   }
 
   toggleLoading() {
@@ -64,8 +65,8 @@ export class AppComponent {
     this.store.dispatch(SetLoading(TodoState, this.loading));
   }
 
-  removeToDo(toDo: ToDo) {
-    this.store.dispatch(Remove(TodoState, toDo.title));
+  removeToDo(title: string) {
+    this.store.dispatch(Remove(TodoState, title));
   }
 
   setDone(toDo: ToDo) {
@@ -90,15 +91,19 @@ export class AppComponent {
     }));
   }
 
-  open(toDo: ToDo) {
-    this.store.dispatch(SetActive(TodoState, toDo.title));
+  open(title: string) {
+    this.store.dispatch(SetActive(TodoState, title));
   }
 
   removeFirstThree(toDos: ToDo[]) {
-    this.store.dispatch(RemoveAll(TodoState, toDos.slice(0, 3).map(t => t.title)));
+    this.removeMultiple(toDos.slice(0, 3).map(t => t.title));
   }
 
-  removeAll() {
+  removeMultiple(titles: string[]) {
+    this.store.dispatch(RemoveAll(TodoState, titles));
+  }
+
+  clearEntities() {
     this.store.dispatch(Clear(TodoState));
   }
 
@@ -117,5 +122,27 @@ export class AppComponent {
     ));
   }
 
+  // for tests
+
+  resetState() {
+    this.store.dispatch(Reset(TodoState));
+  }
+
+  addMultiple() {
+    this.store.dispatch(AddOrReplaceAll(TodoState,
+      [
+        {
+          title: 'NGXS Entity Store 1',
+          description: 'Some Descr 1',
+          done: false
+        },
+        {
+          title: 'NGXS Entity Store 2',
+          description: 'Some Descr 2',
+          done: false
+        }
+      ]
+    ));
+  }
 
 }

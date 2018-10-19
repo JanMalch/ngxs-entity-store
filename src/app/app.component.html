@@ -12,14 +12,14 @@
 <ul>
   <li *ngFor="let toDo of toDos">
     {{ toDo.title }} ({{ toDo.done ? '': 'not '}}done)
-    <button (click)="open(toDo)">Open</button>
+    <button (click)="open(toDo.title)">Open</button>
     <button *ngIf="!toDo.done" (click)="setDone(toDo)">Done</button>
-    <button (click)="removeToDo(toDo)">Remove</button>
+    <button (click)="removeToDo(toDo.title)">Remove</button>
   </li>
 </ul>
   <button (click)="doneAll(toDos)">Mark all as Done</button>
   <button (click)="removeFirstThree(toDos)">Remove first three</button>
-  <button (click)="removeAll()">Remove all</button>
+  <button (click)="clearEntities()">Remove all</button>
 </ng-container>
 
 <div *ngIf="(active$ | async) as active;"
