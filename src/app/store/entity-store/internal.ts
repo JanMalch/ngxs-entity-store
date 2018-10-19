@@ -1,4 +1,4 @@
-import {EntityStore} from './entity-store';
+import {EntityStateModel, EntityStore} from './entity-store';
 
 export interface ExtendsEntityStore<T> {
   new(...args: any[]): EntityStore<T>;
@@ -7,7 +7,6 @@ export interface ExtendsEntityStore<T> {
 export interface HashMap<T> {
   [id: string]: T;
 }
-
 
 export function generateActionObject<T>(fn: string, store: ExtendsEntityStore<T>, payload?: any) {
   const name = store["NGXS_META"].path;
@@ -19,3 +18,6 @@ export function generateActionObject<T>(fn: string, store: ExtendsEntityStore<T>
   return obj;
 }
 
+export function getActive<T>(state: EntityStateModel<T>): T {
+  return state.entities[state.active];
+}

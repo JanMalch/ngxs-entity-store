@@ -9,7 +9,7 @@ export interface ToDo {
 
 @State<EntityStateModel<ToDo>>({
   name: 'todo',
-  defaults: defaultEntityState
+  defaults: defaultEntityState()
 })
 export class TodoState extends EntityStore<ToDo> {
 
