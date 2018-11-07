@@ -1,17 +1,12 @@
 import {ExtendsEntityStore, generateActionObject} from '../internal';
+import {Payload} from './type-alias';
 
-export interface EntityAddAction<T> {
-  payload: T;
-}
+/*export interface EntityAddAction<T> {
+  payload: T | T[];
+}*/
+export type EntityAddAction<T> = Payload<T | T[]>;
 
-export interface EntityAddAllAction<T> {
-  payload: T[];
-}
-
-export function AddOrReplace<T>(store: ExtendsEntityStore<T>, payload: T): EntityAddAction<T> {
+// TODO: behaviour? Should add also replace if it exists? Seperate CreateOrReplace?
+export function AddOrReplace<T>(store: ExtendsEntityStore<T>, payload: T | T[]): EntityAddAction<T> {
   return generateActionObject('add', store, payload);
-}
-
-export function AddOrReplaceAll<T>(store: ExtendsEntityStore<T>, payload: T[]): EntityAddAllAction<T> {
-  return generateActionObject('addAll', store, payload);
 }

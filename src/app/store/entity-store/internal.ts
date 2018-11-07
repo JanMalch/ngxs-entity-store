@@ -1,7 +1,13 @@
 import {EntityStateModel, EntityStore} from './entity-store';
 
-export interface ExtendsEntityStore<T> {
+/*export interface ExtendsEntityStore<T> {
   new(...args: any[]): EntityStore<T>;
+}*/
+
+export type ExtendsEntityStore<T> = Newable<EntityStore<T>>;
+
+export interface Newable<T, P = any[]> {
+  new(args?: P): T;
 }
 
 export interface HashMap<T> {

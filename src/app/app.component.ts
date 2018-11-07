@@ -1,18 +1,6 @@
 import {Component} from '@angular/core';
 import {Select, Store} from '@ngxs/store';
-import {
-  AddOrReplace,
-  AddOrReplaceAll,
-  Clear,
-  ClearActive,
-  Remove,
-  RemoveAll,
-  SetActive,
-  SetError,
-  Update,
-  UpdateActive,
-  UpdateAll
-} from './store/entity-store';
+import {AddOrReplace, ClearActive, Remove, RemoveActive, SetActive, SetError, Update, UpdateActive} from './store/entity-store';
 import {ToDo, TodoState} from './store/todo';
 import {Observable} from 'rxjs';
 import {SetLoading} from './store/entity-store/action-generator';
@@ -38,26 +26,6 @@ export class AppComponent {
   private error = false;
 
   constructor(private store: Store) {
-    /*this.store.dispatch(AddOrReplace(TodoState, {
-      title: 'NGXS Entity Store 0',
-      description: 'Some Descr 0',
-      done: false
-    }));
-
-    this.store.dispatch(AddOrReplaceAll(TodoState,
-      [
-        {
-          title: 'NGXS Entity Store 1',
-          description: 'Some Descr 1',
-          done: false
-        },
-        {
-          title: 'NGXS Entity Store 2',
-          description: 'Some Descr 2',
-          done: false
-        }
-      ]
-    ));*/
   }
 
   toggleLoading() {
@@ -66,14 +34,35 @@ export class AppComponent {
   }
 
   removeToDo(title: string) {
-    this.store.dispatch(Remove(TodoState, title));
+    // this.store.dispatch(Remove(TodoState, title));
+    this.store.dispatch(new TodoState.remove(title));
+  }
+
+  removeAllDones() {
+    this.store.dispatch(new TodoState.remove(e => e.done));
   }
 
   setDone(toDo: ToDo) {
-    this.store.dispatch(Update(TodoState, {
-      ...toDo, // for title as id
+    this.store.dispatch(Update(TodoState, toDo.title, {
       done: true
     }));
+  }
+
+  setOddDone() {
+    this.store.dispatch(Update(TodoState,
+      (e => parseInt(e.title.substring(18), 10) % 2 === 1), // select all ToDos with odd suffix
+      {done: true} // set them done
+    ));
+  }
+
+  updateDescription() {
+    this.store.dispatch(Update(TodoState,
+      (e => e.done), // select all done ToDos
+      (e => { // custom update function: Update their description
+        e.description += ' -- This is done!';
+        return e;
+      })
+    ));
   }
 
   closeDetails() {
@@ -100,11 +89,13 @@ export class AppComponent {
   }
 
   removeMultiple(titles: string[]) {
-    this.store.dispatch(RemoveAll(TodoState, titles));
+    this.store.dispatch(Remove(TodoState, titles));
   }
 
   clearEntities() {
-    this.store.dispatch(Clear(TodoState));
+    // TODO: select all with null ?
+    // Akita does it this way. I like it because you have to explicitly say so
+    this.store.dispatch(Remove(TodoState, null));
   }
 
   addToDo() {
@@ -115,21 +106,29 @@ export class AppComponent {
     }));
   }
 
-  doneAll(toDos: ToDo[]) {
-    this.store.dispatch(UpdateAll(
+  doneAll() {
+    this.store.dispatch(Update(
       TodoState,
-      toDos.map(t => ({...t, done: true}))
+      null, // select all -- TODO: add alias?
+      {done: true}
     ));
   }
 
-  // for tests
+  // --------- for tests ---------
 
   resetState() {
     this.store.dispatch(Reset(TodoState));
   }
 
+  updateMultiple() {
+    this.store.dispatch(Update(TodoState,
+      ['NGXS Entity Store 1', 'NGXS Entity Store 2'],
+      {done: true}
+    ));
+  }
+
   addMultiple() {
-    this.store.dispatch(AddOrReplaceAll(TodoState,
+    this.store.dispatch(AddOrReplace(TodoState,
       [
         {
           title: 'NGXS Entity Store 1',
@@ -143,6 +142,19 @@ export class AppComponent {
         }
       ]
     ));
+  }
+
+  updateActiveWithFn() {
+    this.store.dispatch(UpdateActive(TodoState,
+      (e => {
+        e.description += ' -- Updated with Fn';
+        return e;
+      })
+    ));
+  }
+
+  removeActive() {
+    this.store.dispatch(RemoveActive(TodoState));
   }
 
 }

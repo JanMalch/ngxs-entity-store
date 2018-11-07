@@ -14,7 +14,7 @@ export interface ToDo {
 export class TodoState extends EntityStore<ToDo> {
 
   constructor() {
-    super(TodoState, 'title');
+    super(TodoState, "title");
   }
 
   onUpdate(current: ToDo, updated: Partial<ToDo>): ToDo {

@@ -17,8 +17,11 @@
     <button (click)="removeToDo(toDo.title)">Remove</button>
   </li>
 </ul>
-  <button (click)="doneAll(toDos)">Mark all as Done</button>
+  <button (click)="doneAll()">Mark all as Done</button>
   <button (click)="removeFirstThree(toDos)">Remove first three</button>
+  <button (click)="setOddDone()">Set odd done</button>
+  <button (click)="updateDescription()">Update finished descriptions with "Done"</button>
+  <button (click)="removeAllDones()">Remove all dones</button>
   <button (click)="clearEntities()">Remove all</button>
 </ng-container>
 

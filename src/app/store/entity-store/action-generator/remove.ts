@@ -1,21 +1,11 @@
 import {ExtendsEntityStore, generateActionObject} from '../internal';
+import {EntitySelector, Payload} from './type-alias';
 
-export interface EntityRemoveAction {
-  payload: string;
-}
+/*export interface EntityRemoveAction<T> {
+  payload: EntitySelector<T>;
+}*/
+export type EntityRemoveAction<T> = Payload<EntitySelector<T>>;
 
-export interface EntityRemoveAllAction {
-  payload: string[];
-}
-
-export function Remove(store: ExtendsEntityStore<any>, payload: string): EntityRemoveAction {
+export function Remove<T>(store: ExtendsEntityStore<T>, payload: EntitySelector<T>): EntityRemoveAction<T> {
   return generateActionObject('remove', store, payload);
-}
-
-export function RemoveAll(store: ExtendsEntityStore<any>, payload: string[]): EntityRemoveAllAction {
-  return generateActionObject('removeAll', store, payload);
-}
-
-export function Clear(store: ExtendsEntityStore<any>): {} {
-  return generateActionObject('clear', store);
 }

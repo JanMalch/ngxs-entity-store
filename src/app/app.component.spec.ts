@@ -72,18 +72,7 @@ describe('AppComponent', () => {
     component.addToDo();
     component.addToDo();
     component.addToDo();
-    component.doneAll([
-      {
-        title: 'NGXS Entity Store 1',
-        description: 'Doesn\'t matter. Just need title for ID',
-        done: false
-      },
-      {
-        title: 'NGXS Entity Store 2',
-        description: 'Doesn\'t matter. Just need title for ID',
-        done: false
-      }
-    ]);
+    component.updateMultiple(); // updates 1 and 2
 
     component.toDos$.subscribe(([first, second, third]) => {
       expect(first.title).toBe('NGXS Entity Store 1');
@@ -92,6 +81,94 @@ describe('AppComponent', () => {
       expect(second.done).toBeTruthy();
       expect(third.title).toBe('NGXS Entity Store 3');
       expect(third.done).toBeFalsy();
+    });
+  });
+
+  it('should update all todos', () => {
+    component.addToDo();
+    component.addToDo();
+    component.addToDo();
+    component.doneAll();
+
+    component.toDos$.subscribe(([first, second, third]) => {
+      expect(first.title).toBe('NGXS Entity Store 1');
+      expect(first.done).toBeTruthy();
+      expect(second.title).toBe('NGXS Entity Store 2');
+      expect(second.done).toBeTruthy();
+      expect(third.title).toBe('NGXS Entity Store 3');
+      expect(third.done).toBeTruthy();
+    });
+  });
+
+  it('should update multiple todos by selector fn', () => {
+    component.addToDo();
+    component.addToDo();
+    component.addToDo();
+
+    component.setOddDone();
+
+    component.toDos$.subscribe(([first, second, third]) => {
+      expect(first.title).toBe('NGXS Entity Store 1');
+      expect(first.done).toBeTruthy();
+      expect(second.title).toBe('NGXS Entity Store 2');
+      expect(second.done).toBeFalsy();
+      expect(third.title).toBe('NGXS Entity Store 3');
+      expect(third.done).toBeTruthy();
+    });
+  });
+
+  it('should update multiple todos with update fn', () => {
+    component.addToDo();
+    component.addToDo();
+    component.addToDo();
+
+    component.open('NGXS Entity Store 2');
+    component.setDoneActive();
+    component.updateDescription();
+
+    component.toDos$.subscribe(([first, second, third]) => {
+      expect(first.title).toBe('NGXS Entity Store 1');
+      expect(first.description.includes(' -- This is done!')).toBeFalsy();
+      expect(second.title).toBe('NGXS Entity Store 2');
+      expect(second.description.includes(' -- This is done!')).toBeTruthy();
+      expect(third.title).toBe('NGXS Entity Store 3');
+      expect(third.description.includes(' -- This is done!')).toBeFalsy();
+    });
+  });
+
+  it('should update active todo with update fn', () => {
+    component.addToDo();
+    component.addToDo();
+    component.addToDo();
+
+    component.open('NGXS Entity Store 2');
+    component.updateActiveWithFn();
+
+    component.toDos$.subscribe(([first, second, third]) => {
+      expect(first.title).toBe('NGXS Entity Store 1');
+      expect(first.description.includes(' -- Updated with Fn')).toBeFalsy();
+      expect(second.title).toBe('NGXS Entity Store 2');
+      expect(second.description.includes(' -- Updated with Fn')).toBeTruthy();
+      expect(third.title).toBe('NGXS Entity Store 3');
+      expect(third.description.includes(' -- Updated with Fn')).toBeFalsy();
+    });
+  });
+
+  it('should remove active', () => {
+    component.addToDo();
+    component.addToDo();
+    component.addToDo();
+
+    component.open('NGXS Entity Store 2');
+    component.removeActive();
+
+    component.toDos$.subscribe(([first, second]) => {
+      expect(first.title).toBe('NGXS Entity Store 1');
+      expect(second.title).toBe('NGXS Entity Store 3');
+    });
+
+    component.activeId$.subscribe(id => {
+      expect(id).toBeUndefined();
     });
   });
 
@@ -114,6 +191,30 @@ describe('AppComponent', () => {
 
     component.activeId$.subscribe(state => {
       expect(state).toBeUndefined();
+    });
+  });
+
+  it('should remove multiple todos by function', () => {
+    component.addToDo();
+    component.open('NGXS Entity Store 1');
+    component.setDoneActive();
+
+    component.addToDo();
+
+    component.addToDo();
+    component.open('NGXS Entity Store 3');
+    component.setDoneActive();
+
+    component.addToDo();
+    component.addToDo();
+    component.removeAllDones();
+
+    component.toDos$.subscribe(([first]) => {
+      expect(first.title).toBe('NGXS Entity Store 2');
+    });
+
+    component.count$.subscribe(count => {
+      expect(count).toBe(3);
     });
   });
 

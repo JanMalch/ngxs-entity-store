@@ -1,17 +1,15 @@
 import {StateContext} from '@ngxs/store';
 import {
   EntityAddAction,
-  EntityAddAllAction,
   EntityRemoveAction,
-  EntityRemoveAllAction,
+  EntitySelector,
   EntitySetActiveAction,
   EntitySetErrorAction,
   EntitySetLoadingAction,
   EntityUpdateAction,
-  EntityUpdateActiveAction,
-  EntityUpdateAllAction
+  EntityUpdateActiveAction
 } from './action-generator';
-import {ExtendsEntityStore, getActive, HashMap} from './internal';
+import {ExtendsEntityStore, getActive, HashMap, Newable} from './internal';
 
 export interface EntityStateModel<T> {
   entities: HashMap<T>;
@@ -37,142 +35,167 @@ export abstract class EntityStore<T> {
     this.idKey = _idKey as string;
     this.storePath = storeClass['NGXS_META'].path;
     this.setup(storeClass,
-      'add', 'addAll',
-      'update', 'updateAll', 'updateActive',
-      'remove', 'removeAll', 'clear',
+      'add',
+      'update', 'updateActive',
+      'remove', 'removeActive',
       'setLoading', 'setError',
       'setActive', 'clearActive',
       'reset');
   }
 
-  static get storePath(): string { // used by static getters
+  abstract onUpdate(current: T, updated: Partial<T>): T;
+
+  static get staticStorePath(): string {
     return this['NGXS_META'].path;
   }
 
+  // ------------------- SELECTORS -------------------
+
   static get activeId() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return subState.active;
     };
   }
 
   static get active() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return getActive(subState);
     };
   }
 
   static get keys() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return Object.keys(subState.entities);
     };
   }
 
   static get entities() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return Object.values(subState.entities);
     };
   }
 
   static get entitiesMap() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return subState.entities;
     };
   }
 
   static get size() {
     return (state) => {
-      const subState = elvis(state, this.storePath) as EntityStateModel<any>;
+      const subState = elvis(state, this.staticStorePath) as EntityStateModel<any>;
       return Object.keys(subState.entities).length;
     };
   }
 
   static get error() {
     return (state) => {
-      const name = this.storePath;
+      const name = this.staticStorePath;
       return elvis(state, name).error;
     };
   }
 
   static get loading() {
     return (state) => {
-      const name = this.storePath;
+      const name = this.staticStorePath;
       return elvis(state, name).loading;
     };
   }
 
-  abstract onUpdate(current: T, updated: Partial<T>): T;
-
-  private _update(entities: HashMap<T>, entity: Partial<T>, _id?: string): HashMap<T> {
-    const id = _id || this.idOf(entity);
-    assertValidId(id);
-    const current = entities[id];
-    // enforce Immutable Entities ?
-    // typeof current === "object" && current !== updated
-    entities[id] = this.onUpdate(current, entity);
-    return entities;
+  // Example implemenation of static action getters to allow the following syntax
+  // --> this.store.dispatch(new TodoState.remove(e => e.done));
+  // !!!!!!!!!!!!!!
+  // As you can see as these are static you can't access <T> and lose every type information
+  static get remove(): Newable<any, EntitySelector<any>> {
+    const name = this['NGXS_META'].path;
+    const ReflectedAction = function (data: EntitySelector<any>) {
+      this.payload = data;
+    };
+    ReflectedAction.prototype.constructor.type = `[${name}] remove`;
+    return ReflectedAction as any;
   }
+
+  // ------------------- ACTION HANDLERS -------------------
 
   add({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityAddAction<T>) {
     const {entities} = getState();
-    entities[this.idOf(payload)] = payload;
-    patchState({entities: {...entities}});
-  }
+    if (Array.isArray(payload)) {
+      payload.forEach(e => entities[this.idOf(e)] = e);
+    } else {
+      entities[this.idOf(payload)] = payload;
+    }
 
-  addAll({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityAddAllAction<T>) {
-    const {entities} = getState();
-    payload.forEach(entity => {
-      entities[this.idOf(entity)] = entity;
-    });
     patchState({entities: {...entities}});
   }
 
   update({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityUpdateAction<T>) {
-    const {entities} = getState();
-    patchState({entities: {...this._update(entities, payload)}});
+    let {entities} = getState();
+
+    let affected: T[];
+
+    if (payload.id === null) {
+      affected = Object.values(entities);
+    } else if (typeof payload.id === 'function') {
+      affected = Object.values(entities).filter(e => (<Function>payload.id)(e));
+    } else {
+      const ids = Array.isArray(payload.id) ? payload.id : [payload.id];
+      affected = Object.values(entities).filter(e => ids.includes(this.idOf(e)));
+    }
+
+    if (typeof payload.data === 'function') {
+      affected.forEach(e => {
+        entities = {...this._update(entities, (<Function>payload.data)(e), this.idOf(e))};
+      });
+    } else {
+      affected.forEach(e => {
+        entities = {...this._update(entities, payload.data as Partial<T>, this.idOf(e))};
+      });
+    }
+
+    patchState({entities});
   }
 
   updateActive({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityUpdateActiveAction<T>) {
     const state = getState();
-    const id = this.idOf(getActive(state));
+    const active = getActive(state);
+    const id = this.idOf(active);
     const {entities} = state;
-    patchState({entities: {...this._update(entities, payload, id)}});
+
+    if (typeof payload === 'function') {
+      patchState({entities: {...this._update(entities, payload(active), id)}});
+    } else {
+      patchState({entities: {...this._update(entities, payload, id)}});
+    }
   }
 
-  updateAll({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityUpdateAllAction<T>) {
-    let {entities} = getState();
-    payload.forEach(e => {
-      entities = {...this._update(entities, e)};
-    });
-    patchState({entities});
-  }
-
-  remove({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityRemoveAction) {
+  removeActive({getState, patchState}: StateContext<EntityStateModel<T>>) {
     const {entities, active} = getState();
-    delete entities[payload];
-
-    patchState({
-      entities: {...entities},
-      active: active === payload ? undefined : active
-    });
+    delete entities[active];
+    patchState({entities: {...entities}, active: undefined});
   }
 
-  removeAll({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityRemoveAllAction) {
+  remove({getState, patchState}: StateContext<EntityStateModel<T>>, {payload}: EntityRemoveAction<T>) {
     const {entities, active} = getState();
-    const wasActive = payload.includes(active);
-    payload.forEach(id => delete entities[id]);
-    patchState({
-      entities: {...entities},
-      active: wasActive ? undefined : active
-    });
-  }
 
-  clear({patchState}: StateContext<EntityStateModel<T>>) {
-    patchState({entities: {}, active: undefined});
+    if (payload === null) {
+      patchState({entities: {}, active: undefined});
+    } else {
+      const deleteIds: string[] = typeof payload === 'function' ?
+        Object.values(entities).filter(e => payload(e)).map(e => this.idOf(e)) :
+        Array.isArray(payload) ? payload : [payload];
+
+      const wasActive = deleteIds.includes(active);
+      deleteIds.forEach(id => delete entities[id]);
+      patchState({
+        entities: {...entities},
+        active: wasActive ? undefined : active
+      });
+    }
   }
 
   reset({setState}: StateContext<EntityStateModel<T>>) {
@@ -195,6 +218,19 @@ export abstract class EntityStore<T> {
     patchState({error: payload});
   }
 
+  // ------------------- UTILITY -------------------
+
+  private _update(entities: HashMap<T>, entity: Partial<T>, _id?: string): HashMap<T> {
+    const id = _id || this.idOf(entity);
+    assertValidId(id);
+    const current = entities[id];
+    // TODO: enforce Immutable Entities ?
+    // typeof current === "object" && current !== updated
+    entities[id] = this.onUpdate(current, entity);
+    return entities;
+  }
+
+  // TODO: private?
   protected setup(storeClass: ExtendsEntityStore<T>, ...actions: string[]) {
     actions.forEach(fn => {
       const actionName = `[${this.storePath}] ${fn}`;
@@ -209,6 +245,7 @@ export abstract class EntityStore<T> {
   }
 
   protected idOf(data: Partial<T>): string {
+    // TODO: assertValidId here every time?
     return data[this.idKey];
   }
 

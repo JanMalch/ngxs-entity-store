@@ -1,18 +1,16 @@
 import {ExtendsEntityStore, generateActionObject} from '../internal';
+import {EntitySelector, Updater} from './type-alias';
 
 
 export interface EntityUpdateAction<T> {
-  payload: Partial<T>;
+  payload: {
+    id: EntitySelector<T>; // string | string[] | ((entity: T) => boolean) | undefined;
+    data: Updater<T>; // Partial<T> | ((entity: T) => Partial<T>);
+  };
 }
 
-export interface EntityUpdateAllAction<T> {
-  payload: Array<Partial<T>>;
-}
-
-export function Update<T>(store: ExtendsEntityStore<T>, entity: Partial<T>): EntityUpdateAction<T> {
-  return generateActionObject("update", store, entity);
-}
-
-export function UpdateAll<T>(store: ExtendsEntityStore<T>, entities: Array<Partial<T>>): EntityUpdateAllAction<T> {
-  return generateActionObject("updateAll", store, entities);
+export function Update<T>(store: ExtendsEntityStore<T>,
+                          id: EntitySelector<T>, // string | string[] | ((entity: T) => boolean) | undefined,
+                          data: Updater<T>): EntityUpdateAction<T> {
+  return generateActionObject('update', store, {id, data});
 }
